@@ -55,7 +55,7 @@ M.setup = function(setup_args)
     local blame_view = config.views.default:new(config)
     local is_open = false
 
-    vim.api.nvim_create_user_command("ToggleBlame", function(args)
+    vim.api.nvim_create_user_command("BlameToggle", function(args)
         config.ns_id = vim.api.nvim_create_namespace("blame_ns")
 
         if is_open then
