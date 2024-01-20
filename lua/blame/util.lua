@@ -1,5 +1,4 @@
 local M = {}
-M.nsId = nil
 
 M.scroll_to_same_position = function(win_source, win_target)
     local win_line_source = vim.fn.line("w0", win_source)

@@ -1,5 +1,4 @@
 local M = {}
-M.nsId = nil
 
 ---@return string
 local function random_rgb()
@@ -9,14 +8,12 @@ local function random_rgb()
     return string.format("#%02X%02X%02X", r, g, b)
 end
 
----Creates the highlights for Hash, NotCommited and random color per one hash
----@param parsed_lines any
+---Highlights each unique hash with a random fg
+---@param parsed_lines Porcelain[]
 M.map_highlights_per_hash = function(parsed_lines)
-    vim.api.nvim_set_hl(0, "DimHashBlame", { fg = "DimGray" })
-
     for _, value in ipairs(parsed_lines) do
-        local full_hash = value["hash"]
-        local hash = string.sub(full_hash, 0, 8)
+        local full_hash = value.hash
+        local hash = string.sub(full_hash, 0, 7)
         if vim.fn.hlID(hash) == 0 then
             vim.api.nvim_set_hl(0, hash, { fg = random_rgb() })
         end
@@ -24,23 +21,13 @@ M.map_highlights_per_hash = function(parsed_lines)
 end
 
 ---Applies the created highlights to a specified buffer
----@param buffId integer
----@param merge_consecutive boolean
-M.highlight_same_hash = function(buffId, merge_consecutive)
-    M.nsId = vim.api.nvim_create_namespace("blame_ns")
-    local lines = vim.api.nvim_buf_get_lines(buffId, 0, -1, false)
-
+---@param buf integer
+M.highlight_same_hash = function(buf, lines, config)
     for idx, line in ipairs(lines) do
         local hash = line:match("^%S+")
-        local should_skip = false
-        if idx > 1 and merge_consecutive then
-            should_skip = lines[idx - 1]:match("^%S+") == hash
-        end
-        if hash == "00000000" or should_skip then
-            vim.api.nvim_buf_add_highlight(buffId, M.nsId, "NotCommitedBlame", idx - 1, 0, -1)
-        else
-            vim.api.nvim_buf_add_highlight(buffId, M.nsId, "DimHashBlame", idx - 1, 0, 8)
-            vim.api.nvim_buf_add_highlight(buffId, M.nsId, hash, idx - 1, 9, -1)
+        if hash then
+            vim.api.nvim_buf_add_highlight(buf, config.ns_id, "Comment", idx - 1, 0, 7)
+            vim.api.nvim_buf_add_highlight(buf, config.ns_id, hash, idx - 1, 8, -1)
         end
     end
 end

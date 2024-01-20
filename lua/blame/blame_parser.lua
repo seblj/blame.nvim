@@ -1,57 +1,74 @@
 local M = {}
 
+---@class Porcelain
+---@field author string
+---@field author_email string
+---@field author_time string
+---@field author_tz string
+---@field committer string
+---@field committer_mail string
+---@field committer_time string
+---@field committer_tz string
+---@field filename string
+---@field hash string
+---@field previous string
+---@field summary string
+---@field content string
+
 ---Parses raw porcelain data (string[]) into an array of tables for each line containing the commit data
 ---@param blame_porcelain string[]
----@return table[]
+---@return Porcelain[]
 M.parse_porcelain = function(blame_porcelain)
-    local all_lines = { {} }
-    local next_is_content = false
-
+    local all_lines = {}
     for _, entry in ipairs(blame_porcelain) do
-        if entry == "" then
-            break
-        end
-        if next_is_content then
-            all_lines[#all_lines]["content"] = entry
-            table.insert(all_lines, {})
-            next_is_content = false
-            goto continue
-        end
-        local ident = entry:match("%S+")
-        if ident == "filename" then
-            all_lines[#all_lines]["filename"] = string.sub(entry, 10, -1)
-            next_is_content = true
+        local ident = entry:match("^%S+")
+        if not ident then
+            all_lines[#all_lines].content = entry
+        elseif #ident == 40 then
+            table.insert(all_lines, { hash = ident })
         else
-            if string.len(ident) == 40 then
-                all_lines[#all_lines]["hash"] = ident
-            else
-                all_lines[#all_lines][ident] = string.sub(entry, string.len(ident) + 2, -1)
-            end
+            ident = ident:gsub("-", "_")
+            all_lines[#all_lines][ident] = string.sub(entry, #ident + 2, -1)
         end
-        ::continue::
     end
-    table.remove(all_lines)
     return all_lines
 end
 
----Formats the lines with commit data into strings eg. (hash date author)
----@param blame_lines table[]
----@param config Config
----@return table
-M.format_blame_to_line_string = function(blame_lines, config)
-    local final_lines = {}
-    for _, value in ipairs(blame_lines) do
-        if next(value) ~= nil then
-            local formattedString = string.format(
-                "%-8s %-10s %s",
-                string.sub(value["hash"], 0, 8),
-                os.date(config.date_format, value["committer-time"]),
-                value["author"]
-            )
-            table.insert(final_lines, formattedString)
-        end
-    end
-    return final_lines
+---@class BlameLineField
+---@field value string
+---@field hl string
+
+---@class BlameLine
+---@field idx number
+---@field author BlameLineField
+---@field date BlameLineField
+---@field hash BlameLineField
+
+---@param blame_lines Porcelain[]
+---@return BlameLine[]
+M.create_lines = function(blame_lines, config)
+    return vim.iter(blame_lines)
+        :enumerate()
+        :map(function(i, v)
+            local hash = string.sub(v.hash, 0, 7)
+            return {
+                idx = i,
+                author = {
+                    value = v.author .. "  ",
+                    hl = hash,
+                },
+                date = {
+                    ---@diagnostic disable-next-line: param-type-mismatch
+                    value = os.date(config.date_format .. "  ", v.committer_time),
+                    hl = hash,
+                },
+                hash = {
+                    value = hash,
+                    hl = "Comment",
+                },
+            }
+        end)
+        :totable()
 end
 
 return M
