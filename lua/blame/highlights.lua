@@ -12,16 +12,13 @@ end
 ---Creates the highlights for Hash, NotCommited and random color per one hash
 ---@param parsed_lines any
 M.map_highlights_per_hash = function(parsed_lines)
-    vim.cmd([[
-    highlight DimHashBlame guifg=DimGray
-    highlight NotCommitedBlame guifg=bg guibg=bg
-  ]])
+    vim.api.nvim_set_hl(0, "DimHashBlame", { fg = "DimGray" })
 
     for _, value in ipairs(parsed_lines) do
         local full_hash = value["hash"]
         local hash = string.sub(full_hash, 0, 8)
         if vim.fn.hlID(hash) == 0 then
-            vim.cmd("highlight " .. hash .. " guifg=" .. random_rgb())
+            vim.api.nvim_set_hl(0, hash, { fg = random_rgb() })
         end
     end
 end
