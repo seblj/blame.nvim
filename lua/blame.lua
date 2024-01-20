@@ -70,7 +70,9 @@ M.setup = function(setup_args)
     end, {
         nargs = "?",
         complete = function()
-            return { "virtual", "window" }
+            return vim.iter.filter(function(v)
+                return v ~= "default"
+            end, vim.tbl_keys(config.views))
         end,
     })
 end
