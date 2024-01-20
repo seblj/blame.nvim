@@ -14,7 +14,7 @@ local highlights = require("blame.highlights")
 local config = {
     date_format = "%d.%m.%Y",
     views = {
-        default = virtual_blame,
+        default = window_blame,
         window = window_blame,
         virtual = virtual_blame,
     },
