@@ -9,9 +9,11 @@ local highlights = require("blame.highlights")
 ---@field close fun()
 
 ---@class Config
----@field date_format string Format of the output date
+---@field date_format? string Format of the output date
+---@field default? "window" | "virtual" Default if no argument given
 local config = {
     date_format = "%d.%m.%Y",
+    default = "window",
 }
 
 ---@param blame_view BlameView
@@ -61,7 +63,9 @@ M.setup = function(setup_args)
             blame.blame_view:close()
             blame.is_open = false
         else
-            local blame_view = arg == "virtual" and blame.blame_view_virtual or blame.blame_view_window
+            local blame_view = (arg == "" and config.default == "virtual" or arg == "virtual")
+                    and blame.blame_view_virtual
+                or blame.blame_view_window
             blame.blame_view = blame_view
             open(blame_view)
             blame.is_open = true

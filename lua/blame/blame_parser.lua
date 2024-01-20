@@ -28,10 +28,12 @@ M.parse_porcelain = function(blame_porcelain)
             table.insert(all_lines, { hash = ident })
         else
             ident = ident:gsub("-", "_")
+
+            local info = string.sub(entry, #ident + 2, -1)
             if ident == "author_time" or ident == "committer_time" then
-                all_lines[#all_lines][ident] = tonumber(string.sub(entry, #ident + 2, -1))
+                all_lines[#all_lines][ident] = tonumber(info)
             else
-                all_lines[#all_lines][ident] = string.sub(entry, #ident + 2, -1)
+                all_lines[#all_lines][ident] = info
             end
         end
     end
