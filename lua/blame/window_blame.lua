@@ -1,19 +1,34 @@
-local util = require("blame.util")
 local highlights = require("blame.highlights")
 local parser = require("blame.blame_parser")
 
-local M = {}
-local blame_window = nil
-local original_window = nil
+---@class BlameViewWindow : BlameView
+---@field config Config
+---@field blame_window? integer
+---@field original_window? integer
+local BlameViewWindow = {}
+
+---@param config Config
+---@return BlameView
+function BlameViewWindow:new(config)
+    local o = {}
+    setmetatable(o, { __index = self })
+
+    o.config = config
+    o.blame_window = nil
+    o.original_window = nil
+
+    return o
+end
 
 ---Sets the autocommands for the blame buffer
-local function setup_autocmd()
+---@private
+function BlameViewWindow:setup_autocmd()
     vim.api.nvim_create_autocmd({ "BufHidden", "BufUnload" }, {
         callback = function()
-            vim.wo[original_window].cursorbind = false
-            vim.wo[original_window].scrollbind = false
-            original_window = nil
-            blame_window = nil
+            vim.wo[self.original_window][0].cursorbind = false
+            vim.wo[self.original_window][0].scrollbind = false
+            self.original_window = nil
+            self.blame_window = nil
         end,
         buffer = 0,
         group = vim.api.nvim_create_augroup("NvimBlame", { clear = true }),
@@ -21,11 +36,17 @@ local function setup_autocmd()
     })
 end
 
----Open window blame
----@param parsed_blames Porcelain[]
----@param config Config
-M.window_blame = function(parsed_blames, config)
-    local blame_lines = vim.iter(parser.create_lines(parsed_blames, config))
+local function scroll_to_same_position(win_source, win_target)
+    local win_line_source = vim.fn.line("w0", win_source)
+    vim.api.nvim_win_set_cursor(win_target, { win_line_source + vim.o.scrolloff, 0 })
+    vim.api.nvim_win_call(win_target, function()
+        vim.cmd("normal! zt")
+    end)
+end
+
+---@param porcelain_lines Porcelain[]
+function BlameViewWindow:open(porcelain_lines)
+    local blame_lines = vim.iter(parser.create_lines(porcelain_lines, self.config))
         :map(function(v)
             local is_commited = v.hash.value ~= "0000000"
             return is_commited and string.format("%s %s %s", v.hash.value, v.date.value, v.author.value) or ""
@@ -36,11 +57,10 @@ M.window_blame = function(parsed_blames, config)
         return acc < #v and #v or acc
     end) + 7
 
-    local winbar = vim.o.winbar
-    original_window = vim.api.nvim_get_current_win()
+    self.original_window = vim.api.nvim_get_current_win()
 
     vim.cmd("lefta vnew")
-    blame_window = vim.api.nvim_get_current_win()
+    self.blame_window = vim.api.nvim_get_current_win()
     vim.api.nvim_win_set_width(0, width)
     vim.api.nvim_buf_set_lines(0, 0, -1, false, blame_lines)
     vim.bo.bufhidden = "wipe"
@@ -48,29 +68,23 @@ M.window_blame = function(parsed_blames, config)
     vim.bo.swapfile = false
     vim.bo.modifiable = false
     vim.bo.ft = "blame"
-    if winbar ~= "" then
-        vim.opt_local.winbar = "%p"
-    end
-    highlights.highlight_same_hash(0, blame_lines, config)
+    vim.wo[self.blame_window][0].winbar = vim.wo[self.original_window].winbar
 
-    util.scroll_to_same_position(original_window, blame_window)
-    setup_autocmd()
+    highlights.highlight_same_hash(blame_lines, self.config)
 
-    for _, option in ipairs({ "cursorbind", "scrollbind" }) do
-        vim.api.nvim_set_option_value(option, true, { win = original_window })
-        vim.api.nvim_set_option_value(option, true, { win = blame_window })
-    end
+    scroll_to_same_position(self.original_window, self.blame_window)
+    self:setup_autocmd()
 
-    vim.api.nvim_set_current_win(original_window)
+    vim.wo[self.original_window][0].scrollbind = true
+    vim.wo[self.blame_window][0].scrollbind = true
+    vim.wo[self.original_window][0].cursorbind = true
+    vim.wo[self.blame_window][0].cursorbind = true
+
+    vim.api.nvim_set_current_win(self.original_window)
 end
 
----Close the blame window
-M.close_window = function()
-    vim.api.nvim_win_close(blame_window, true)
+function BlameViewWindow:close()
+    vim.api.nvim_win_close(self.blame_window, true)
 end
 
-M.is_window_open = function()
-    return blame_window ~= nil and vim.api.nvim_win_is_valid(blame_window)
-end
-
-return M
+return BlameViewWindow

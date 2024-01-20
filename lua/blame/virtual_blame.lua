@@ -1,16 +1,28 @@
 local parser = require("blame.blame_parser")
-local M = {}
 
----Creates the virtual text floated to theright with the blame lines
----@param blame_lines Porcelain[]
+---@class BlameViewVirtual : BlameView
+---@field config Config
+local BlameView = {}
+
 ---@param config Config
-M.virtual_blame = function(blame_lines, config)
-    local lines = parser.create_lines(blame_lines, config)
+---@return BlameView
+function BlameView:new(config)
+    local o = {}
+    setmetatable(o, { __index = self })
+
+    o.config = config
+
+    return o
+end
+
+---@param porcelain_lines Porcelain[]
+function BlameView:open(porcelain_lines)
+    local lines = parser.create_lines(porcelain_lines, self.config)
 
     for _, line in pairs(lines) do
         local is_commited = line.hash.value ~= "0000000"
         if is_commited then
-            vim.api.nvim_buf_set_extmark(0, config.ns_id, line.idx - 1, 0, {
+            vim.api.nvim_buf_set_extmark(0, self.config.ns_id, line.idx - 1, 0, {
                 virt_text_pos = "right_align",
                 virt_text = {
                     { line.author.value, line.author.hl },
@@ -22,4 +34,9 @@ M.virtual_blame = function(blame_lines, config)
     end
 end
 
-return M
+function BlameView:close()
+    vim.api.nvim_buf_clear_namespace(0, self.config.ns_id, 0, -1)
+    self.config.ns_id = nil
+end
+
+return BlameView
