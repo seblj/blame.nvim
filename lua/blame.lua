@@ -10,10 +10,14 @@ local highlights = require("blame.highlights")
 
 ---@class Config
 ---@field date_format? string Format of the output date
----@field default? "window" | "virtual" Default if no argument given
+---@field views table<string, BlameView>
 local config = {
     date_format = "%d.%m.%Y",
-    default = "window",
+    views = {
+        default = virtual_blame,
+        window = window_blame,
+        virtual = virtual_blame,
+    },
 }
 
 ---@param blame_view BlameView
@@ -48,27 +52,20 @@ local M = {}
 M.setup = function(setup_args)
     config = vim.tbl_deep_extend("force", config, setup_args or {})
 
-    local blame = {
-        is_open = false,
-        blame_view = nil,
-        blame_view_virtual = virtual_blame:new(config),
-        blame_view_window = window_blame:new(config),
-    }
+    local blame_view = config.views.default:new(config)
+    local is_open = false
 
     vim.api.nvim_create_user_command("ToggleBlame", function(args)
         config.ns_id = vim.api.nvim_create_namespace("blame_ns")
 
-        local arg = args["args"]
-        if blame.is_open then
-            blame.blame_view:close()
-            blame.is_open = false
+        if is_open then
+            blame_view:close()
+            is_open = false
         else
-            local blame_view = (arg == "" and config.default == "virtual" or arg == "virtual")
-                    and blame.blame_view_virtual
-                or blame.blame_view_window
-            blame.blame_view = blame_view
+            local arg = args.args == "" and "default" or args.args
+            blame_view = config.views[arg]:new(config)
             open(blame_view)
-            blame.is_open = true
+            is_open = true
         end
     end, {
         nargs = "?",
