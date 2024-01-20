@@ -42,7 +42,7 @@ end
 
 local M = {}
 
----@param setup_args Config?
+---@param setup_args Config | nil
 M.setup = function(setup_args)
     config = vim.tbl_deep_extend("force", config, setup_args or {})
 

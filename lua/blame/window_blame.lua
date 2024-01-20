@@ -1,5 +1,4 @@
 local highlights = require("blame.highlights")
-local parser = require("blame.blame_parser")
 
 ---@class BlameViewWindow : BlameView
 ---@field config Config
@@ -40,16 +39,19 @@ local function scroll_to_same_position(win_source, win_target)
     local win_line_source = vim.fn.line("w0", win_source)
     vim.api.nvim_win_set_cursor(win_target, { win_line_source + vim.o.scrolloff, 0 })
     vim.api.nvim_win_call(win_target, function()
-        vim.cmd("normal! zt")
+        vim.cmd.normal({ "zt", bang = true })
     end)
 end
 
 ---@param porcelain_lines Porcelain[]
 function BlameViewWindow:open(porcelain_lines)
-    local blame_lines = vim.iter(parser.create_lines(porcelain_lines, self.config))
+    local blame_lines = vim.iter(porcelain_lines)
         :map(function(v)
-            local is_commited = v.hash.value ~= "0000000"
-            return is_commited and string.format("%s %s %s", v.hash.value, v.date.value, v.author.value) or ""
+            local hash = string.sub(v.hash, 0, 7)
+            local is_commited = hash ~= "0000000"
+            return is_commited
+                    and string.format("%s  %s  %s", hash, os.date(self.config.date_format, v.committer_time), v.author)
+                or ""
         end)
         :totable()
 
@@ -59,7 +61,7 @@ function BlameViewWindow:open(porcelain_lines)
 
     self.original_window = vim.api.nvim_get_current_win()
 
-    vim.cmd("lefta vnew")
+    vim.cmd.vnew({ mods = { split = "aboveleft" } })
     self.blame_window = vim.api.nvim_get_current_win()
     vim.api.nvim_win_set_width(0, width)
     vim.api.nvim_buf_set_lines(0, 0, -1, false, blame_lines)
