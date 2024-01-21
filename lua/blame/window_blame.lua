@@ -45,15 +45,13 @@ end
 
 ---@param porcelain_lines Porcelain[]
 function BlameViewWindow:open(porcelain_lines)
-    local blame_lines = vim.iter(porcelain_lines)
-        :map(function(v)
-            local hash = string.sub(v.hash, 0, 7)
-            local is_commited = hash ~= "0000000"
-            return is_commited
-                    and string.format("%s  %s  %s", hash, os.date(self.config.date_format, v.committer_time), v.author)
-                or ""
-        end)
-        :totable()
+    local blame_lines = vim.iter.map(function(v)
+        local hash = string.sub(v.hash, 0, 7)
+        local is_commited = hash ~= "0000000"
+        return is_commited
+                and string.format("%s  %s  %s", hash, os.date(self.config.date_format, v.committer_time), v.author)
+            or ""
+    end, porcelain_lines)
 
     local width = vim.iter(blame_lines):fold(0, function(acc, v)
         return acc < #v and #v or acc
