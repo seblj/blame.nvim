@@ -27,7 +27,7 @@ require("lazy").setup({
 
 The following commands are used:
 
-- `ToggleBlame [mode]` - Toggle the blame window or virtual text. If no mode is provided it opens the `window` type
+- `BlameToggle [mode]` - Toggle the blame window or virtual text. If no mode is provided it opens the `window` type
 
 There are two builtin modes:
 
