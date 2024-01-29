@@ -15,7 +15,7 @@ _Same commits are highlighted in the same color_
 ```lua
 require("lazy").setup({
     {
-        "seblj/nvim-formatter",
+        "seblj/blame.nvim",
         config = function()
             require("blame").setup()
         end,
